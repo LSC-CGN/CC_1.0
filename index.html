@@ -4428,6 +4428,41 @@ function TabAgentBar({tab}){
 }
 
 // ---------- Main App ----------
+
+// ════════════════════════════════════════════════════════════════════════
+// StickyHeader — fester Header oben + automatischer Spacer fuer den Inhalt
+// ════════════════════════════════════════════════════════════════════════
+function StickyHeader({tab,setTab,tabContent}){
+  const headerRef=useRef(null);
+  const [headerH,setHeaderH]=useState(0);
+  useEffect(function(){
+    function measure(){
+      if(headerRef.current){
+        setHeaderH(headerRef.current.getBoundingClientRect().height);
+      }
+    }
+    measure();
+    var ro = (typeof ResizeObserver!=="undefined") ? new ResizeObserver(measure) : null;
+    if(ro && headerRef.current) ro.observe(headerRef.current);
+    window.addEventListener("resize",measure);
+    return function(){ if(ro) ro.disconnect(); window.removeEventListener("resize",measure); };
+  },[tab]);
+  return [
+    h("div",{key:"hdr",ref:headerRef,style:{
+      position:"fixed",top:0,left:0,right:0,zIndex:50,
+      background:"var(--bg)",
+      boxShadow:"0 4px 12px -6px rgba(0,0,0,.4)"
+    }},
+      h(BrandBar,null),
+      h(TabBar,{tab,setTab}),
+      h(TabAgentBar,{tab})
+    ),
+    // Spacer (gleiche Hoehe wie Header) damit der Inhalt nicht darunter rutscht
+    h("div",{key:"spc",style:{height:headerH}}),
+    h("div",{key:"con",className:"fadein"},tabContent)
+  ];
+}
+
 function App(){
   const [tab,setTab]=useState("iso");
   const [stamm,setStamm]=useState(DEFAULT_STAMMDATEN);
@@ -4499,10 +4534,8 @@ function App(){
 
   return h(AppCtx.Provider,{value:ctxVal},
     h("div",{"data-theme":theme,style:{minHeight:"100vh",background:"var(--bg)",color:"var(--t)"}},
-      h(BrandBar,null),
-      h(TabBar,{tab,setTab}),
-      h(TabAgentBar,{tab}),
-      h("div",{className:"fadein",key:tab},tabContent),
+      // Fixed-Header: BrandBar + TabBar + TabAgentBar bleiben fest beim Scrollen
+      h(StickyHeader,{tab,setTab,tabContent}),
       h(FloatingChat,null),
       h(AgentDock,{tab:tab})
     )
